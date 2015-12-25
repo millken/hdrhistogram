@@ -4,8 +4,10 @@
 package hdrhistogram
 
 import (
+	"bytes"
 	"fmt"
 	"math"
+	"text/tabwriter"
 )
 
 // A Bracket is a part of a cumulative distribution.
@@ -325,6 +327,21 @@ func Import(s *Snapshot) *Histogram {
 	}
 	h.totalCount = totalCount
 	return h
+}
+
+// String returns a string containing the histogram in the HistogramLogProcessor
+// format suitable for plotting
+func (h *Histogram) String() string {
+	buf := new(bytes.Buffer)
+	w := new(tabwriter.Writer)
+	w.Init(buf, 8, 1, 2, ' ', tabwriter.AlignRight)
+	fmt.Fprintln(w, "Value\tPercentile\tTotalCount\t\t1/1(1-Percentile)")
+	for _, bracket := range h.CumulativeDistribution() {
+		percentile := bracket.Quantile / 100
+		fmt.Fprintf(w, "%d\t%.5f\t%d\t\t%.2f\n", bracket.ValueAt, percentile, bracket.Count, 1.0/(1.0-percentile))
+	}
+	w.Flush()
+	return buf.String()
 }
 
 func (h *Histogram) iterator() *iterator {
